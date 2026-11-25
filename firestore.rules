@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isEmailOwner() {
+      return isVerifiedUser() && request.auth.token.email == 'koleyanir090@gmail.com';
+    }
+
+    function isOwner() {
+      return isEmailOwner() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isPositiveRate(val) {
+      return (val is int || val is float) && val > 0 && val <= 10000000;
+    }
+
+    function isValidBullionRates(data) {
+      return data.keys().hasAll([
+          'gold24kPer10g',
+          'gold22kPer10g',
+          'silverPerKg',
+          'silverPer10g',
+          'gstNote',
+          'updatedByLabel',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'gold24kPer10g',
+          'gold22kPer10g',
+          'silverPerKg',
+          'silverPer10g',
+          'gstNote',
+          'marketNote',
+          'updatedByLabel',
+          'updatedAt'
+        ]) &&
+        isPositiveRate(data.gold24kPer10g) &&
+        isPositiveRate(data.gold22kPer10g) &&
+        isPositiveRate(data.silverPerKg) &&
+        isPositiveRate(data.silverPer10g) &&
+        data.gstNote is string && data.gstNote.size() >= 5 && data.gstNote.size() <= 140 &&
+        (!('marketNote' in data) || (data.marketNote is string && data.marketNote.size() <= 200)) &&
+        data.updatedByLabel is string && data.updatedByLabel.size() >= 2 && data.updatedByLabel.size() <= 60 &&
+        data.updatedAt == request.time;
+    }
+
+    function isValidRateHistoryEntry(data) {
+      return data.keys().hasAll([
+          'gold24kPer10g',
+          'gold22kPer10g',
+          'silverPerKg',
+          'silverPer10g',
+          'updatedByUid',
+          'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'gold24kPer10g',
+          'gold22kPer10g',
+          'silverPerKg',
+          'silverPer10g',
+          'marketNote',
+          'updatedByUid',
+          'updatedAt'
+        ]) &&
+        isPositiveRate(data.gold24kPer10g) &&
+        isPositiveRate(data.gold22kPer10g) &&
+        isPositiveRate(data.silverPerKg) &&
+        isPositiveRate(data.silverPer10g) &&
+        (!('marketNote' in data) || (data.marketNote is string && data.marketNote.size() <= 200)) &&
+        data.updatedByUid is string &&
+        isValidId(data.updatedByUid) &&
+        data.updatedByUid == request.auth.uid &&
+        data.updatedAt == request.time;
+    }
+
+    match /rates/{rateId} {
+      allow get: if isValidId(rateId) && rateId == 'live';
+      allow list: if false;
+      allow create: if isValidId(rateId) &&
+        rateId == 'live' &&
+        isOwner() &&
+        isValidBullionRates(incoming());
+      allow update: if isValidId(rateId) &&
+        rateId == 'live' &&
+        isOwner() &&
+        isValidBullionRates(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'gold24kPer10g',
+          'gold22kPer10g',
+          'silverPerKg',
+          'silverPer10g',
+          'gstNote',
+          'marketNote',
+          'updatedByLabel',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /rateHistory/{entryId} {
+      allow get: if isValidId(entryId) && isOwner();
+      allow list: if isEmailOwner() && resource.data.updatedByUid == request.auth.uid;
+      allow create: if isValidId(entryId) &&
+        isOwner() &&
+        isValidRateHistoryEntry(incoming());
+      allow update, delete: if false;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && isSignedIn() && request.auth.uid == adminUid;
+      allow list, create, update, delete: if false;
+    }
+
+    match /test/{docId} {
+      allow get: if isValidId(docId) && docId == 'connection';
+      allow list, write: if false;
+    }
+  }
+}

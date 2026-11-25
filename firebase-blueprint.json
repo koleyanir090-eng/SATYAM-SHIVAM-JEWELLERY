@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "BullionRates": {
+      "title": "BullionRates",
+      "description": "Live daily wholesale rates for 24K Gold, 22K Gold, and 999 Fine Silver published by the owner.",
+      "type": "object",
+      "properties": {
+        "gold24kPer10g": {
+          "type": "number",
+          "description": "24K (999) Gold wholesale rate in INR per 10 grams."
+        },
+        "gold22kPer10g": {
+          "type": "number",
+          "description": "22K (916 BIS) Gold wholesale rate in INR per 10 grams."
+        },
+        "silverPerKg": {
+          "type": "number",
+          "description": "Pure 999 Fine Silver wholesale rate in INR per kilogram."
+        },
+        "silverPer10g": {
+          "type": "number",
+          "description": "Pure 999 Fine Silver wholesale rate in INR per 10 grams."
+        },
+        "gstNote": {
+          "type": "string",
+          "maxLength": 140,
+          "minLength": 5,
+          "description": "Display note stating GST applicability at billing."
+        },
+        "marketNote": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Optional brief wholesale desk remark from the owner."
+        },
+        "updatedByLabel": {
+          "type": "string",
+          "maxLength": 60,
+          "minLength": 2,
+          "description": "Public non-PII attribution label such as Managing Director."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest rate update."
+        }
+      },
+      "required": [
+        "gold24kPer10g",
+        "gold22kPer10g",
+        "silverPerKg",
+        "silverPer10g",
+        "gstNote",
+        "updatedByLabel",
+        "updatedAt"
+      ]
+    },
+    "RateHistoryEntry": {
+      "title": "RateHistoryEntry",
+      "description": "Audit log entry for manual owner rate updates.",
+      "type": "object",
+      "properties": {
+        "gold24kPer10g": {
+          "type": "number"
+        },
+        "gold22kPer10g": {
+          "type": "number"
+        },
+        "silverPerKg": {
+          "type": "number"
+        },
+        "silverPer10g": {
+          "type": "number"
+        },
+        "marketNote": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "updatedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "gold24kPer10g",
+        "gold22kPer10g",
+        "silverPerKg",
+        "silverPer10g",
+        "updatedByUid",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/rates/{rateId}": {
+      "schema": {
+        "$ref": "#/entities/BullionRates"
+      },
+      "description": "Stores live wholesale bullion rates under document ID 'live'."
+    },
+    "/rateHistory/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/RateHistoryEntry"
+      },
+      "description": "Append-only owner audit trail of manual rate updates."
+    }
+  }
+}

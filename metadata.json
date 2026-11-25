@@ -1,0 +1,6 @@
+{
+  "name": "SATYAM SHIVAM JEWELLERY",
+  "description": "Own manufacturing factory and all-India wholesale 24K Gold, 22K Gold, and Silver jewellery supplier since 1997 in Chinna Bazar, Nellore.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
